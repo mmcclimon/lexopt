@@ -1,6 +1,12 @@
 package lexopt
 
-import "strings"
+import (
+	"errors"
+	"fmt"
+	"strings"
+)
+
+var ErrNoToken = fmt.Errorf("no token available")
 
 type Parser struct {
 	Current Arg
@@ -28,13 +34,11 @@ func New(argv []string) *Parser {
 }
 
 func (p *Parser) Next() bool {
-	if p.idx >= len(p.argv) || p.state == finished {
+	nextTok, err := p.nextTok()
+	if errors.Is(err, ErrNoToken) {
 		return false
 	}
 
-	defer func() { p.idx++ }()
-
-	nextTok := p.argv[p.idx]
 	switch {
 	case nextTok == "--":
 		p.state = finished
@@ -88,4 +92,29 @@ func (p *Parser) Long(toMatch string) Arg {
 		kind: argLong,
 		s:    toMatch,
 	}
+}
+
+// this should return an error
+func (p *Parser) Value() (string, error) {
+	switch p.state {
+	case pendingValue:
+		p.state = empty
+		return p.pending, nil
+
+	case empty:
+		return p.nextTok()
+	}
+
+	// TODO
+	return "", nil
+}
+
+func (p *Parser) nextTok() (string, error) {
+	if p.idx >= len(p.argv) || p.state == finished {
+		return "", ErrNoToken
+	}
+
+	next := p.argv[p.idx]
+	p.idx++
+	return next, nil
 }
