@@ -3,7 +3,7 @@ package lexopt
 import "strings"
 
 type Parser struct {
-	Current string
+	Current Arg
 
 	argv    []string
 	idx     int
@@ -42,16 +42,19 @@ func (p *Parser) Next() bool {
 
 	case strings.HasPrefix(nextTok, "--"):
 		p.state = empty
+
+		nextTok = strings.TrimPrefix(nextTok, "--")
 		before, after, hasEqual := strings.Cut(nextTok, "=")
 		if hasEqual {
 			p.pending = after
 			p.state = pendingValue
 		}
-		p.Current = strings.TrimPrefix(before, "--")
+		p.Current = longArg(before)
 		return true
 	}
 
-	p.Current = p.argv[p.idx]
+	// TODO
+	// p.Current = p.argv[p.idx]
 	return true
 }
 
@@ -59,26 +62,30 @@ func (p *Parser) Err() error {
 	return nil
 }
 
-func (p *Parser) Short(toMatch string) string {
+func (p *Parser) Short(toMatch string) Arg {
 	if toMatch == "" {
 		panic("argument to Short must not be empty")
 	}
 
 	if p.state != short {
-		return ""
+		return noMatch()
 	}
 
-	return toMatch
+	// TODO
+	return noMatch()
 }
 
-func (p *Parser) Long(toMatch string) string {
+func (p *Parser) Long(toMatch string) Arg {
 	if toMatch == "" {
 		panic("argument to Long must not be empty")
 	}
 
-	if !(p.state == empty || p.state == pendingValue) {
-		return ""
+	if p.state != empty && p.state != pendingValue {
+		return noMatch()
 	}
 
-	return toMatch
+	return Arg{
+		kind: argLong,
+		s:    toMatch,
+	}
 }

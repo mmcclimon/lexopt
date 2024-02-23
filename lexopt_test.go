@@ -50,7 +50,7 @@ func TestDoubleDash(t *testing.T) {
 func TestPanics(t *testing.T) {
 	pt := newTester()
 
-	tests := map[string]func(string) string{
+	tests := map[string]func(string) Arg{
 		"Short": pt.Short,
 		"Long":  pt.Long,
 	}
