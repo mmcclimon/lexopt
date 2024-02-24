@@ -47,29 +47,35 @@ func (p *Parser) Next() bool {
 
 	case short:
 		if len(p.short) == 0 {
-			// TODO: should we set this here or elsewhere?
 			p.state = empty
 			break
 		}
 
-		if len(p.short) > 1 && strings.HasPrefix(p.short, "=") {
+		if strings.HasPrefix(p.short, "=") && p.short != "=" {
 			p.err = ErrUnexpectedValue
 			return false
 		}
 
 		p.Current = toShort(p.short[0])
 		p.short = p.short[1:]
+
+		if p.short == "" {
+			p.state = empty
+		}
 		return true
 
 	case finished:
 		nextTok, err := p.nextTok()
-		if err != nil {
+		switch {
+		case errors.Is(err, ErrNoToken):
+			return false
+		case err != nil:
 			p.err = err
 			return false
+		default:
+			p.Current = toPositional(nextTok)
+			return true
 		}
-
-		p.Current = toValue(nextTok)
-		return true
 	}
 
 	if p.state != empty {
@@ -104,9 +110,12 @@ func (p *Parser) Next() bool {
 			return true
 		}
 
-		p.state = short
+		if len(nextTok) > 2 {
+			p.state = short
+			p.short = nextTok[2:]
+		}
+
 		p.Current = toShort(nextTok[1])
-		p.short = strings.TrimPrefix(nextTok[2:], "-")
 		return true
 
 	default:
@@ -149,34 +158,30 @@ func (p *Parser) Value() (Arg, error) {
 	case empty:
 		val, err := p.nextTok()
 		if err != nil {
-			return noMatch(), err
+			return noMatch(), ErrNoValue
 		}
 
 		return toValue(val), nil
 
 	case short:
 		if p.short == "=" {
-			// -x= is nonsense, sorry.
-			return noMatch(), ErrNoToken
+			// If you passed -x= and want a value, that's silly.
+			return noMatch(), ErrNoValue
 		}
 
-		// Here, we're asking for a value for a short option, so we can just
-		// return everything we haven't yet consumed.
-
-		p.short = strings.TrimPrefix(p.short, "=")
-
-		val := toValue(p.short)
+		// Remove a leading equals, if we have it, and then return everything
+		// else.
+		val := toValue(strings.TrimPrefix(p.short, "="))
 		p.short = ""
 		p.state = empty
 		return val, nil
 
 	case finished:
-		return p.Current, nil
+		return noMatch(), ErrNoValue
 
 	default:
 		panic("unreachable")
 	}
-
 }
 
 func (p *Parser) nextTok() (string, error) {
@@ -192,6 +197,7 @@ func (p *Parser) nextTok() (string, error) {
 //nolint:unused
 func (p *Parser) dumpState() {
 	fmt.Println("--- parser state ---")
+	fmt.Println("Current:    ", p.Current)
 	fmt.Println("argv:       ", p.argv)
 	fmt.Println("idx:        ", p.idx)
 	fmt.Println("state:      ", p.state)

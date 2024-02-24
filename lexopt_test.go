@@ -72,7 +72,7 @@ func (pt *parserTester) noValueOk() {
 		pt.t.Fatal("expected error from .Value()")
 	}
 
-	if !errors.Is(err, ErrNoToken) {
+	if !errors.Is(err, ErrNoValue) {
 		pt.t.Errorf(".Value() retured weird error, expect %q, got %q", ErrNoToken, err)
 	}
 }
@@ -182,6 +182,19 @@ func TestShortValues(t *testing.T) {
 		pt.valueOk("no")
 	})
 
+	t.Run("space", func(t *testing.T) {
+		pt := newTester(t, "-u", "no")
+		pt.shortOk("u")
+		pt.valueOk("no")
+	})
+
+	t.Run("space with multiple", func(t *testing.T) {
+		pt := newTester(t, "-vu", "no")
+		pt.shortOk("v")
+		pt.shortOk("u")
+		pt.valueOk("no")
+	})
+
 	t.Run("cuddled with equal", func(t *testing.T) {
 		pt := newTester(t, "-u=no")
 		pt.shortOk("u")
@@ -194,15 +207,15 @@ func TestShortValues(t *testing.T) {
 		pt.shortOk("=")
 	})
 
-	t.Run("unconsumed equal", func(t *testing.T) {
-		pt := newTester(t, "-u=foo")
-		pt.shortOk("u")
-		pt.nextErrOk(ErrUnexpectedValue)
-	})
-
 	t.Run("equal as value", func(t *testing.T) {
 		pt := newTester(t, "-u=")
 		pt.shortOk("u")
 		pt.noValueOk()
+	})
+
+	t.Run("unconsumed equal", func(t *testing.T) {
+		pt := newTester(t, "-u=foo")
+		pt.shortOk("u")
+		pt.nextErrOk(ErrUnexpectedValue)
 	})
 }
