@@ -6,7 +6,10 @@ import (
 	"strings"
 )
 
-var ErrNoToken = fmt.Errorf("no token available")
+var (
+	ErrNoToken         = fmt.Errorf("no token available")
+	ErrUnexpectedValue = fmt.Errorf("unexpected value")
+)
 
 type Parser struct {
 	Current Arg
@@ -15,6 +18,8 @@ type Parser struct {
 	idx     int
 	state   state
 	pending string
+	short   string
+	err     error
 }
 
 type state int
@@ -34,6 +39,31 @@ func New(argv []string) *Parser {
 }
 
 func (p *Parser) Next() bool {
+	switch p.state {
+	case pendingValue:
+		p.err = ErrUnexpectedValue
+		return false
+
+	case short:
+		if len(p.short) == 0 {
+			// TODO: should we set this here or elsewhere?
+			p.state = empty
+			break
+		}
+
+		if len(p.short) > 1 && strings.HasPrefix(p.short, "=") {
+			p.err = ErrUnexpectedValue
+			return false
+		}
+
+		p.Current = toShort(p.short[0])
+		p.short = p.short[1:]
+		return true
+
+	case finished, empty:
+		// logic below
+	}
+
 	nextTok, err := p.nextTok()
 	if errors.Is(err, ErrNoToken) {
 		return false
@@ -53,8 +83,18 @@ func (p *Parser) Next() bool {
 			p.pending = after
 			p.state = pendingValue
 		}
-		p.Current = longArg(before)
+		p.Current = toLong(before)
 		return true
+
+	case strings.HasPrefix(nextTok, "-"):
+		if nextTok == "-" {
+			p.Current = toValue(nextTok)
+			return true
+		}
+
+		p.state = short
+		p.Current = toShort(nextTok[1])
+		p.short = strings.TrimPrefix(nextTok[2:], "-")
 	}
 
 	// TODO
@@ -63,50 +103,65 @@ func (p *Parser) Next() bool {
 }
 
 func (p *Parser) Err() error {
-	return nil
+	return p.err
 }
 
-func (p *Parser) Short(toMatch string) Arg {
+func Short(toMatch string) Arg {
 	if toMatch == "" {
 		panic("argument to Short must not be empty")
 	}
 
-	if p.state != short {
-		return noMatch()
+	if len(toMatch) > 1 {
+		panic("argument to Short must be a single byte")
 	}
 
-	// TODO
-	return noMatch()
+	return toShort(toMatch[0])
 }
 
-func (p *Parser) Long(toMatch string) Arg {
+func Long(toMatch string) Arg {
 	if toMatch == "" {
 		panic("argument to Long must not be empty")
 	}
 
-	if p.state != empty && p.state != pendingValue {
-		return noMatch()
-	}
-
-	return Arg{
-		kind: argLong,
-		s:    toMatch,
-	}
+	return toLong(toMatch)
 }
 
 // this should return an error
-func (p *Parser) Value() (string, error) {
+func (p *Parser) Value() (Arg, error) {
 	switch p.state {
 	case pendingValue:
 		p.state = empty
-		return p.pending, nil
+		return toValue(p.pending), nil
 
 	case empty:
-		return p.nextTok()
+		val, err := p.nextTok()
+		if err != nil {
+			return noMatch(), err
+		}
+
+		return toValue(val), nil
+
+	case short:
+		if p.short == "=" {
+			// -x= is nonsense, sorry.
+			return noMatch(), ErrNoToken
+		}
+
+		// Here, we're asking for a value for a short option, so we can just
+		// return everything we haven't yet consumed.
+
+		p.short = strings.TrimPrefix(p.short, "=")
+
+		val := toValue(p.short)
+		p.short = ""
+		p.state = empty
+		return val, nil
+
+	case finished:
+		// TODO
 	}
 
-	// TODO
-	return "", nil
+	panic("unhandled state")
 }
 
 func (p *Parser) nextTok() (string, error) {

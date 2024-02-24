@@ -6,6 +6,7 @@ const (
 	argUnmatched argType = iota
 	argShort
 	argLong
+	argValue
 )
 
 type Arg struct {
@@ -13,12 +14,20 @@ type Arg struct {
 	s    string
 }
 
-func longArg(s string) Arg {
+func toLong(s string) Arg {
 	return Arg{argLong, s}
+}
+
+func toShort(b byte) Arg {
+	return Arg{argShort, string(b)}
 }
 
 func noMatch() Arg {
 	return Arg{kind: argUnmatched}
+}
+
+func toValue(s string) Arg {
+	return Arg{argValue, s}
 }
 
 func (a Arg) String() string {
