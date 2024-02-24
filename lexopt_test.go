@@ -2,6 +2,7 @@ package lexopt
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -218,4 +219,14 @@ func TestShortValues(t *testing.T) {
 		pt.shortOk("u")
 		pt.nextErrOk(ErrUnexpectedValue)
 	})
+}
+
+func TestDumpState(t *testing.T) {
+	var w strings.Builder
+	pt := newTester(t, "-l")
+	pt.dumpState(&w)
+
+	if !strings.Contains(w.String(), "--- parser state ---") {
+		pt.t.Fatalf("got nonsense from dumpState: %s", w.String())
+	}
 }

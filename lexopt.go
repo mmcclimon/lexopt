@@ -3,6 +3,7 @@ package lexopt
 import (
 	"errors"
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -194,15 +195,14 @@ func (p *Parser) nextTok() (string, error) {
 	return next, nil
 }
 
-//nolint:unused
-func (p *Parser) dumpState() {
-	fmt.Println("--- parser state ---")
-	fmt.Println("Current:    ", p.Current)
-	fmt.Println("argv:       ", p.argv)
-	fmt.Println("idx:        ", p.idx)
-	fmt.Println("state:      ", p.state)
-	fmt.Println("pending arg:", p.pending)
-	fmt.Println("short:      ", p.short)
-	fmt.Println("err:        ", p.err)
-	fmt.Println("---")
+func (p *Parser) dumpState(w io.Writer) {
+	fmt.Fprintln(w, "--- parser state ---")
+	fmt.Fprintln(w, "Current:    ", p.Current)
+	fmt.Fprintln(w, "argv:       ", p.argv)
+	fmt.Fprintln(w, "idx:        ", p.idx)
+	fmt.Fprintln(w, "state:      ", p.state)
+	fmt.Fprintln(w, "pending arg:", p.pending)
+	fmt.Fprintln(w, "short:      ", p.short)
+	fmt.Fprintln(w, "err:        ", p.err)
+	fmt.Fprintln(w, "---")
 }
