@@ -188,3 +188,15 @@ func (p *Parser) nextTok() (string, error) {
 	p.idx++
 	return next, nil
 }
+
+//nolint:unused
+func (p *Parser) dumpState() {
+	fmt.Println("--- parser state ---")
+	fmt.Println("argv:       ", p.argv)
+	fmt.Println("idx:        ", p.idx)
+	fmt.Println("state:      ", p.state)
+	fmt.Println("pending arg:", p.pending)
+	fmt.Println("short:      ", p.short)
+	fmt.Println("err:        ", p.err)
+	fmt.Println("---")
+}
