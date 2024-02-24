@@ -9,6 +9,7 @@ import (
 var (
 	ErrNoToken         = fmt.Errorf("no token available")
 	ErrUnexpectedValue = fmt.Errorf("unexpected value")
+	ErrNoValue         = fmt.Errorf("no value found")
 )
 
 type Parser struct {
@@ -99,7 +100,7 @@ func (p *Parser) Next() bool {
 
 	case strings.HasPrefix(nextTok, "-"):
 		if nextTok == "-" {
-			p.Current = toValue(nextTok)
+			p.Current = toPositional(nextTok)
 			return true
 		}
 
@@ -109,10 +110,9 @@ func (p *Parser) Next() bool {
 		return true
 
 	default:
-		p.Current = toValue(nextTok)
+		p.Current = toPositional(nextTok)
 		return true
 	}
-
 }
 
 func (p *Parser) Err() error {

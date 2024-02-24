@@ -6,6 +6,7 @@ const (
 	argUnmatched argType = iota
 	argShort
 	argLong
+	argPositional
 	argValue
 )
 
@@ -20,6 +21,10 @@ func toLong(s string) Arg {
 
 func toShort(b byte) Arg {
 	return Arg{argShort, string(b)}
+}
+
+func toPositional(s string) Arg {
+	return Arg{argPositional, s}
 }
 
 func noMatch() Arg {

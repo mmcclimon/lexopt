@@ -48,9 +48,11 @@ func (pt *parserTester) shortOk(expect string) {
 	}
 }
 
-func (pt *parserTester) nextValueOk(expect string) {
+func (pt *parserTester) positionalOk(expect string) {
 	pt.nextOk()
-	pt.valueOk(expect)
+	if pt.Current != toPositional(expect) {
+		pt.t.Errorf(".Next(), expect %q, got %q", expect, pt.Current)
+	}
 }
 
 func (pt *parserTester) valueOk(expect string) {
@@ -107,7 +109,7 @@ func TestNoOptions(t *testing.T) {
 func TestDoubleDash(t *testing.T) {
 	pt := newTester(t, "--foo", "--", "whatever")
 	pt.longOk("foo")
-	pt.nextValueOk("whatever")
+	pt.positionalOk("whatever")
 }
 
 func TestLongValues(t *testing.T) {
@@ -121,6 +123,7 @@ func TestLongValues(t *testing.T) {
 			pt := newTester(t, argv...)
 			pt.longOk("foo")
 			pt.valueOk("bar")
+			pt.emptyOk()
 		})
 	}
 
@@ -138,8 +141,6 @@ func TestNoValue(t *testing.T) {
 }
 
 func TestDashIsValue(t *testing.T) {
-	t.Skip("this test is broken for now")
-
 	t.Run("as long opt value", func(t *testing.T) {
 		pt := newTester(t, "--file", "-")
 		pt.longOk("file")
@@ -148,7 +149,7 @@ func TestDashIsValue(t *testing.T) {
 
 	t.Run("as standalone value", func(t *testing.T) {
 		pt := newTester(t, "-")
-		pt.valueOk("-")
+		pt.positionalOk("-")
 	})
 }
 
@@ -156,12 +157,15 @@ func TestShortBasic(t *testing.T) {
 	pt := newTester(t, "-x", "-b")
 	pt.shortOk("x")
 	pt.shortOk("b")
+	pt.emptyOk()
 }
 
 func TestShortCuddled(t *testing.T) {
-	pt := newTester(t, "-xb")
+	pt := newTester(t, "-xb", "foo")
 	pt.shortOk("x")
 	pt.shortOk("b")
+	pt.positionalOk("foo")
+	pt.emptyOk()
 }
 
 func TestShortValues(t *testing.T) {
