@@ -20,3 +20,7 @@ func longArg(s string) Arg {
 func noMatch() Arg {
 	return Arg{kind: argUnmatched}
 }
+
+func (a Arg) String() string {
+	return a.s
+}

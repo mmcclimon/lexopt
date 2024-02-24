@@ -7,54 +7,55 @@ import (
 
 type parserTester struct {
 	*Parser
+	t *testing.T
 }
 
-func newTester(argv ...string) *parserTester {
-	return &parserTester{New(argv)}
+func newTester(t *testing.T, argv ...string) *parserTester {
+	return &parserTester{New(argv), t}
 }
 
-func (pt *parserTester) nextOk(t *testing.T) {
+func (pt *parserTester) nextOk() {
 	if !pt.Next() {
-		t.Error(".Next() returned false, expected value")
+		pt.t.Error(".Next() returned false, expected value")
 	}
 }
 
-func (pt *parserTester) emptyOk(t *testing.T) {
+func (pt *parserTester) emptyOk() {
 	if pt.Next() {
-		t.Error(".Next() returned true, expected empty")
+		pt.t.Error(".Next() returned true, expected empty")
 	}
 }
 
-func (pt *parserTester) longOk(t *testing.T, expect string) {
+func (pt *parserTester) longOk(expect string) {
 	if pt.Current != pt.Long(expect) {
-		t.Errorf(`.Current, expect .Long(%q), got %v`, expect, pt.Current)
+		pt.t.Errorf(`.Current, expect .Long(%q), got %v`, expect, pt.Current)
 	}
 }
 
-func (pt *parserTester) valueOk(t *testing.T, expect string) {
+func (pt *parserTester) valueOk(expect string) {
 	val, err := pt.Value()
 	if err != nil {
-		t.Fatalf(".Value() return unexpected err: %s", err)
+		pt.t.Fatalf(".Value() return unexpected err: %s", err)
 	}
 
 	if val != expect {
-		t.Errorf(".Value(), expect %q, got %q", expect, val)
+		pt.t.Errorf(".Value(), expect %q, got %q", expect, val)
 	}
 }
 
-func (pt *parserTester) noValueOk(t *testing.T) {
+func (pt *parserTester) noValueOk() {
 	_, err := pt.Value()
 	if err == nil {
-		t.Fatal("expected error from .Value()")
+		pt.t.Fatal("expected error from .Value()")
 	}
 
 	if !errors.Is(err, ErrNoToken) {
-		t.Errorf(".Value() retured weird error, expect %q, got %q", ErrNoToken, err)
+		pt.t.Errorf(".Value() retured weird error, expect %q, got %q", ErrNoToken, err)
 	}
 }
 
 func TestPanics(t *testing.T) {
-	pt := newTester()
+	pt := newTester(t)
 
 	tests := map[string]func(string) Arg{
 		"Short": pt.Short,
@@ -75,22 +76,22 @@ func TestPanics(t *testing.T) {
 }
 
 func TestSingleLongOpt(t *testing.T) {
-	pt := newTester("--foo")
-	pt.nextOk(t)
-	pt.longOk(t, "foo")
-	pt.emptyOk(t)
+	pt := newTester(t, "--foo")
+	pt.nextOk()
+	pt.longOk("foo")
+	pt.emptyOk()
 }
 
 func TestNoOptions(t *testing.T) {
-	pt := newTester()
-	pt.emptyOk(t)
+	pt := newTester(t)
+	pt.emptyOk()
 }
 
 func TestDoubleDash(t *testing.T) {
-	pt := newTester("--foo", "--", "whatever")
-	pt.nextOk(t)
-	pt.emptyOk(t)
-	pt.emptyOk(t)
+	pt := newTester(t, "--foo", "--", "whatever")
+	pt.nextOk()
+	pt.emptyOk()
+	pt.emptyOk()
 }
 
 func TestLongOptValues(t *testing.T) {
@@ -101,17 +102,17 @@ func TestLongOptValues(t *testing.T) {
 
 	for desc, argv := range tests {
 		t.Run(desc, func(t *testing.T) {
-			pt := newTester(argv...)
-			pt.nextOk(t)
-			pt.longOk(t, "foo")
-			pt.valueOk(t, "bar")
+			pt := newTester(t, argv...)
+			pt.nextOk()
+			pt.longOk("foo")
+			pt.valueOk("bar")
 		})
 	}
 }
 
 func TestNoValue(t *testing.T) {
-	pt := newTester("--foo")
-	pt.nextOk(t)
-	pt.longOk(t, "foo")
-	pt.noValueOk(t)
+	pt := newTester(t, "--foo")
+	pt.nextOk()
+	pt.longOk("foo")
+	pt.noValueOk()
 }
