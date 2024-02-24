@@ -35,15 +35,22 @@ func (pt *parserTester) nextErrOk(expectErr error) {
 }
 
 func (pt *parserTester) longOk(expect string) {
+	pt.nextOk()
 	if pt.Current != Long(expect) {
 		pt.t.Errorf(`.Current, expect .Long(%q), got %v`, expect, pt.Current)
 	}
 }
 
 func (pt *parserTester) shortOk(expect string) {
+	pt.nextOk()
 	if pt.Current != Short(expect) {
 		pt.t.Errorf(`.Current, expect .Short(%q), got %v`, expect, pt.Current)
 	}
+}
+
+func (pt *parserTester) nextValueOk(expect string) {
+	pt.nextOk()
+	pt.valueOk(expect)
 }
 
 func (pt *parserTester) valueOk(expect string) {
@@ -88,7 +95,6 @@ func TestPanics(t *testing.T) {
 
 func TestSingleLongOpt(t *testing.T) {
 	pt := newTester(t, "--foo")
-	pt.nextOk()
 	pt.longOk("foo")
 	pt.emptyOk()
 }
@@ -100,10 +106,8 @@ func TestNoOptions(t *testing.T) {
 
 func TestDoubleDash(t *testing.T) {
 	pt := newTester(t, "--foo", "--", "whatever")
-	pt.nextOk()
 	pt.longOk("foo")
-	pt.nextOk()
-	pt.valueOk("whatever")
+	pt.nextValueOk("whatever")
 }
 
 func TestLongValues(t *testing.T) {
@@ -115,7 +119,6 @@ func TestLongValues(t *testing.T) {
 	for desc, argv := range tests {
 		t.Run(desc, func(t *testing.T) {
 			pt := newTester(t, argv...)
-			pt.nextOk()
 			pt.longOk("foo")
 			pt.valueOk("bar")
 		})
@@ -123,7 +126,6 @@ func TestLongValues(t *testing.T) {
 
 	t.Run("unconsumed value", func(t *testing.T) {
 		pt := newTester(t, "--foo=bar")
-		pt.nextOk()
 		pt.longOk("foo")
 		pt.nextErrOk(ErrUnexpectedValue)
 	})
@@ -131,7 +133,6 @@ func TestLongValues(t *testing.T) {
 
 func TestNoValue(t *testing.T) {
 	pt := newTester(t, "--foo")
-	pt.nextOk()
 	pt.longOk("foo")
 	pt.noValueOk()
 }
@@ -141,76 +142,62 @@ func TestDashIsValue(t *testing.T) {
 
 	t.Run("as long opt value", func(t *testing.T) {
 		pt := newTester(t, "--file", "-")
-		pt.nextOk()
 		pt.longOk("file")
 		pt.valueOk("-")
 	})
 
 	t.Run("as standalone value", func(t *testing.T) {
 		pt := newTester(t, "-")
-		pt.nextOk()
 		pt.valueOk("-")
 	})
 }
 
 func TestShortBasic(t *testing.T) {
 	pt := newTester(t, "-x", "-b")
-	pt.nextOk()
 	pt.shortOk("x")
-	pt.nextOk()
 	pt.shortOk("b")
 }
 
 func TestShortCuddled(t *testing.T) {
 	pt := newTester(t, "-xb")
-	pt.nextOk()
 	pt.shortOk("x")
-	pt.nextOk()
 	pt.shortOk("b")
 }
 
 func TestShortValues(t *testing.T) {
 	t.Run("cuddled", func(t *testing.T) {
 		pt := newTester(t, "-uno")
-		pt.nextOk()
 		pt.shortOk("u")
 		pt.valueOk("no")
 	})
 
 	t.Run("cuddled with multiples", func(t *testing.T) {
 		pt := newTester(t, "-vuno")
-		pt.nextOk()
 		pt.shortOk("v")
-		pt.nextOk()
 		pt.shortOk("u")
 		pt.valueOk("no")
 	})
 
 	t.Run("cuddled with equal", func(t *testing.T) {
 		pt := newTester(t, "-u=no")
-		pt.nextOk()
 		pt.shortOk("u")
 		pt.valueOk("no")
 	})
 
 	t.Run("equal as short", func(t *testing.T) {
 		pt := newTester(t, "-u=")
-		pt.nextOk()
 		pt.shortOk("u")
-		pt.nextOk()
 		pt.shortOk("=")
 	})
 
 	t.Run("unconsumed equal", func(t *testing.T) {
 		pt := newTester(t, "-u=foo")
-		pt.nextOk()
 		pt.shortOk("u")
 		pt.nextErrOk(ErrUnexpectedValue)
 	})
 
 	t.Run("equal as value", func(t *testing.T) {
 		pt := newTester(t, "-u=")
-		pt.nextOk()
 		pt.shortOk("u")
 		pt.noValueOk()
 	})
