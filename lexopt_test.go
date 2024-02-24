@@ -101,8 +101,9 @@ func TestNoOptions(t *testing.T) {
 func TestDoubleDash(t *testing.T) {
 	pt := newTester(t, "--foo", "--", "whatever")
 	pt.nextOk()
-	pt.emptyOk()
-	pt.emptyOk()
+	pt.longOk("foo")
+	pt.nextOk()
+	pt.valueOk("whatever")
 }
 
 func TestLongValues(t *testing.T) {

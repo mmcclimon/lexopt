@@ -60,8 +60,19 @@ func (p *Parser) Next() bool {
 		p.short = p.short[1:]
 		return true
 
-	case finished, empty:
-		// logic below
+	case finished:
+		nextTok, err := p.nextTok()
+		if err != nil {
+			p.err = err
+			return false
+		}
+
+		p.Current = toValue(nextTok)
+		return true
+	}
+
+	if p.state != empty {
+		panic("unexpected state!")
 	}
 
 	nextTok, err := p.nextTok()
@@ -72,7 +83,7 @@ func (p *Parser) Next() bool {
 	switch {
 	case nextTok == "--":
 		p.state = finished
-		return false
+		return p.Next()
 
 	case strings.HasPrefix(nextTok, "--"):
 		p.state = empty
@@ -95,11 +106,13 @@ func (p *Parser) Next() bool {
 		p.state = short
 		p.Current = toShort(nextTok[1])
 		p.short = strings.TrimPrefix(nextTok[2:], "-")
+		return true
+
+	default:
+		p.Current = toValue(nextTok)
+		return true
 	}
 
-	// TODO
-	// p.Current = p.argv[p.idx]
-	return true
 }
 
 func (p *Parser) Err() error {
@@ -158,14 +171,16 @@ func (p *Parser) Value() (Arg, error) {
 		return val, nil
 
 	case finished:
-		// TODO
+		return p.Current, nil
+
+	default:
+		panic("unreachable")
 	}
 
-	panic("unhandled state")
 }
 
 func (p *Parser) nextTok() (string, error) {
-	if p.idx >= len(p.argv) || p.state == finished {
+	if p.idx >= len(p.argv) {
 		return "", ErrNoToken
 	}
 
