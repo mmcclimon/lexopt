@@ -17,26 +17,29 @@ func newTester(t *testing.T, argv ...string) *parserTester {
 }
 
 func (pt *parserTester) nextOk() {
+	pt.t.Helper()
 	if !pt.Next() {
 		pt.t.Error(".Next() returned false, expected value")
 	}
 }
 
 func (pt *parserTester) emptyOk() {
+	pt.t.Helper()
 	if pt.Next() {
 		pt.t.Error(".Next() returned true, expected empty")
 	}
 }
 
 func (pt *parserTester) nextErrOk(expectErr error) {
+	pt.t.Helper()
 	pt.emptyOk()
-
 	if err := pt.Err(); !errors.Is(err, expectErr) {
 		pt.t.Errorf(".Err() did not get expected err, want %q, got %q", expectErr, err)
 	}
 }
 
 func (pt *parserTester) longOk(expect string) {
+	pt.t.Helper()
 	pt.nextOk()
 	if pt.Current != Long(expect) {
 		pt.t.Errorf(`.Current, expect .Long(%q), got %v`, expect, pt.Current)
@@ -44,6 +47,7 @@ func (pt *parserTester) longOk(expect string) {
 }
 
 func (pt *parserTester) shortOk(expect rune) {
+	pt.t.Helper()
 	pt.nextOk()
 	if pt.Current != Short(expect) {
 		pt.t.Errorf(`.Current, expect .Short(%q), got %v`, expect, pt.Current)
@@ -51,6 +55,7 @@ func (pt *parserTester) shortOk(expect rune) {
 }
 
 func (pt *parserTester) positionalOk(expect string) {
+	pt.t.Helper()
 	pt.nextOk()
 	if pt.Current != toPositional(expect) {
 		pt.t.Errorf(".Next(), expect %q, got %q", expect, pt.Current)
@@ -58,6 +63,7 @@ func (pt *parserTester) positionalOk(expect string) {
 }
 
 func (pt *parserTester) valueOk(expect string) {
+	pt.t.Helper()
 	val, err := pt.Value()
 	if err != nil {
 		pt.t.Fatalf(".Value() return unexpected err: %s", err)
