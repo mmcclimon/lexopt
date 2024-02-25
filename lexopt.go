@@ -17,12 +17,13 @@ var (
 type Parser struct {
 	Current Arg
 
-	argv    []string
-	idx     int
-	state   state
-	pending string
-	short   string
-	err     error
+	argv     []string
+	idx      int
+	state    state
+	pending  string
+	short    string
+	shortpos int
+	err      error
 }
 
 type state int
@@ -50,14 +51,13 @@ func (p *Parser) Next() bool {
 
 	case short:
 		// We have an -s=value with an unconsumed value; this is an error.
-		if strings.HasPrefix(p.short, "=") && p.short != "=" {
+		if p.short[p.shortpos] == '=' && p.shortpos >= 1 {
 			p.err = ErrUnexpectedValue
 			return false
 		}
 
 		// Take the next short option out of an -abc set.
-		p.Current = toShort(p.short[0])
-		p.updateShort(p.short[1:])
+		p.Current = p.takeShort()
 		return true
 
 	case finished:
@@ -102,8 +102,8 @@ func (p *Parser) Next() bool {
 			return true
 		}
 
-		p.Current = toShort(nextTok[1])
-		p.updateShort(nextTok[2:])
+		p.resetShort(nextTok[1:])
+		p.Current = p.takeShort()
 		return true
 
 	default:
@@ -130,10 +130,9 @@ func (p *Parser) Value() (Arg, error) {
 		return toValue(val), nil
 
 	case short:
-		// Remove a leading equals, if we have it, and then return everything
-		// else.
-		val := toValue(strings.TrimPrefix(p.short, "="))
-		p.updateShort("")
+		// Remove a leading equals, if we have it, and then return everything else.
+		val := toValue(strings.TrimPrefix(p.short[p.shortpos:], "="))
+		p.resetShort("")
 		return val, nil
 
 	case finished:
@@ -159,10 +158,26 @@ func (p *Parser) nextTok() (string, error) {
 }
 
 // Set p.short to remaining and update the state correctly for empty string.
-func (p *Parser) updateShort(remaining string) {
-	p.short = remaining
+func (p *Parser) takeShort() Arg {
+	ret := toShort(p.short[p.shortpos])
+	p.shortpos++
 
-	if remaining == "" {
+	if p.shortpos >= len(p.short) {
+		p.state = empty
+		p.short = ""
+		p.shortpos = 0
+	} else {
+		p.state = short
+	}
+
+	return ret
+}
+
+func (p *Parser) resetShort(value string) {
+	p.short = value
+	p.shortpos = 0
+
+	if value == "" {
 		p.state = empty
 	} else {
 		p.state = short

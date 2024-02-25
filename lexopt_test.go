@@ -210,12 +210,6 @@ func TestShortValues(t *testing.T) {
 		pt.valueOk("no")
 	})
 
-	t.Run("equal as short", func(t *testing.T) {
-		pt := newTester(t, "-u=")
-		pt.shortOk("u")
-		pt.shortOk("=")
-	})
-
 	t.Run("equal as value", func(t *testing.T) {
 		pt := newTester(t, "-u=")
 		pt.shortOk("u")

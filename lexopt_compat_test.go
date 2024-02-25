@@ -87,3 +87,56 @@ func TestMissingValuesCompat(t *testing.T) {
 	pt3 := newTester(t)
 	pt3.noValueOk()
 }
+
+func TestWeirdValuesCompat(t *testing.T) {
+	pt := newTester(t, "", "--=", "--=3", "-", "-x", "--", "-", "-x", "--", "", "-", "-x")
+	pt.positionalOk("")
+
+	// Weird and questionable, indeed!
+	pt.longOk("")
+	pt.valueOk("")
+	pt.longOk("")
+	pt.valueOk("3")
+
+	pt.positionalOk("-")
+	pt.shortOk("x")
+	pt.valueOk("--")
+
+	pt.positionalOk("-")
+	pt.shortOk("x")
+
+	pt.positionalOk("")
+	pt.positionalOk("-")
+	pt.positionalOk("-x")
+
+	pt.emptyOk()
+}
+
+func TestShortOptEqualsSignCompat(t *testing.T) {
+	pt := newTester(t, "-a=b")
+	pt.shortOk("a")
+	pt.valueOk("b")
+
+	pt = newTester(t, "-a=b")
+	pt.shortOk("a")
+	pt.nextErrOk(ErrUnexpectedValue)
+	pt.emptyOk()
+
+	pt = newTester(t, "-a=")
+	pt.shortOk("a")
+	pt.valueOk("")
+	pt.emptyOk()
+
+	pt = newTester(t, "-a=")
+	pt.shortOk("a")
+	pt.nextErrOk(ErrUnexpectedValue)
+	pt.emptyOk()
+
+	pt = newTester(t, "-=")
+	pt.shortOk("=")
+	pt.emptyOk()
+
+	pt = newTester(t, "-=a")
+	pt.shortOk("=")
+	pt.valueOk("a")
+}
