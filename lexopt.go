@@ -112,35 +112,61 @@ func (p *Parser) Next() bool {
 	}
 }
 
-// this should return an error
 func (p *Parser) Value() (Arg, error) {
+	ret, _, err := p.value()
+	return ret, err
+}
+
+func (p *Parser) value() (Arg, bool, error) {
 	switch p.state {
 	case pendingValue:
 		val := toValue(p.pending)
 		p.state = empty
 		p.pending = ""
-		return val, nil
+		return val, true, nil
 
 	case empty:
 		val, err := p.nextTok()
 		if err != nil {
-			return noMatch(), ErrNoValue
+			return noMatch(), false, ErrNoValue
 		}
 
-		return toValue(val), nil
+		return toValue(val), false, nil
 
 	case short:
 		// Remove a leading equals, if we have it, and then return everything else.
-		val := toValue(strings.TrimPrefix(string(p.short[p.shortpos:]), "="))
+		raw := string(p.short[p.shortpos:])
+		hasEqual := strings.HasPrefix(raw, "=")
+		val := toValue(strings.TrimPrefix(raw, "="))
 		p.resetShort("")
-		return val, nil
+		return val, hasEqual, nil
 
 	case finished:
-		return noMatch(), ErrNoValue
+		return noMatch(), false, ErrNoValue
 
 	default:
 		panic("unreachable")
 	}
+}
+
+func (p *Parser) Values() ([]Arg, error) {
+	if !p.hasPending() && !p.nextIsNormal() {
+		return nil, ErrNoValue
+	}
+
+	var vals []Arg
+
+	// Take one.
+	val, hadEqual, _ := p.value()
+	vals = append(vals, val)
+
+	// Take more, if we can.
+	for !hadEqual && p.nextIsNormal() {
+		val, _ := p.nextTok()
+		vals = append(vals, toValue(val))
+	}
+
+	return vals, nil
 }
 
 func (p *Parser) Err() error {
@@ -181,6 +207,39 @@ func (p *Parser) resetShort(value string) {
 		p.state = empty
 	} else {
 		p.state = short
+	}
+}
+
+func (p *Parser) hasPending() bool {
+	switch p.state {
+	case empty, finished:
+		return false
+	case pendingValue:
+		return true
+	case short:
+		return p.shortpos < len(p.short)
+	default:
+		panic("unreachable")
+	}
+}
+
+func (p *Parser) nextIsNormal() bool {
+	if p.idx >= len(p.argv) {
+		// out of options
+		return false
+	}
+
+	next := p.argv[p.idx]
+
+	switch {
+	case p.state == finished:
+		return true
+
+	case next == "-":
+		return true
+
+	default:
+		return !strings.HasPrefix(next, "-")
 	}
 }
 

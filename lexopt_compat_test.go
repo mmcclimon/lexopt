@@ -5,7 +5,7 @@ package lexopt
 import "testing"
 
 func TestBasicCompat(t *testing.T) {
-	pt := newTester(t, "-n", "10", "foo", "-", "--", "baz", "-qux")
+	pt := newTesterWs(t, "-n 10 foo - -- baz -qux")
 	pt.shortOk('n')
 	pt.valueOk("10")
 	pt.positionalOk("foo")
@@ -18,7 +18,7 @@ func TestBasicCompat(t *testing.T) {
 }
 
 func TestCombinedCompat(t *testing.T) {
-	pt := newTester(t, "-abc", "-fvalue", "-xfvalue")
+	pt := newTesterWs(t, "-abc -fvalue -xfvalue")
 	pt.shortOk('a')
 	pt.shortOk('b')
 	pt.shortOk('c')
@@ -150,4 +150,58 @@ func TestUnicodeCompat(t *testing.T) {
 	pt.positionalOk("µ")
 	pt.longOk("foo")
 	pt.valueOk("µ")
+}
+
+func TestMultiValuesCompat(t *testing.T) {
+	for _, test := range []string{"-a b c d", "-ab c d", "-a b c d --", "--a b c d"} {
+		pt := newTesterWs(t, test)
+		pt.nextOk()
+		pt.valuesOk("b", "c", "d")
+	}
+
+	for _, test := range []string{"-a=b c", "--a=b c"} {
+		pt := newTesterWs(t, test)
+		pt.nextOk()
+		pt.valuesOk("b")
+		pt.positionalOk("c")
+	}
+
+	for _, test := range []string{"-a", "--a", "-a -b", "-a -- b", "-a --"} {
+		pt := newTesterWs(t, test)
+		pt.nextOk()
+		pt.noValuesOk()
+		pt.Next()
+
+		if err := pt.Err(); err != nil {
+			t.Errorf(".Err() returned unexpected err: %s", err)
+		}
+	}
+
+	for _, test := range []string{"-a=", "--a="} {
+		pt := newTesterWs(t, test)
+		pt.nextOk()
+		pt.valuesOk("")
+		pt.emptyOk()
+	}
+
+	// Rust lexopt has tests here that assert that leaving the values iterator
+	// does not change the internal state of the parser. We can't do that in Go,
+	// because we don't have iterators. The tests are included here to
+	// demonstrate the differences.
+
+	t.Run("rust lexopt incompatibility", func(t *testing.T) {
+		t.Skip("go has no iteration protocol")
+
+		for _, test := range []string{"-a=b", "--a=b", "-a b"} {
+			pt := newTesterWs(t, test)
+			pt.nextOk()
+			pt.valuesOk()
+			pt.valueOk("b")
+		}
+
+		pt := newTesterWs(t, "-ab")
+		pt.shortOk('a')
+		pt.valuesOk()
+		pt.shortOk('b')
+	})
 }

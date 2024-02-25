@@ -2,6 +2,7 @@ package lexopt
 
 import (
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -14,6 +15,10 @@ type parserTester struct {
 
 func newTester(t *testing.T, argv ...string) *parserTester {
 	return &parserTester{New(argv), t}
+}
+
+func newTesterWs(t *testing.T, argv string) *parserTester {
+	return &parserTester{New(strings.Fields(argv)), t}
 }
 
 func (pt *parserTester) nextOk() {
@@ -74,15 +79,45 @@ func (pt *parserTester) valueOk(expect string) {
 	}
 }
 
-func (pt *parserTester) noValueOk() {
-	_, err := pt.Value()
+func noValOk[T any](desc string, pt *parserTester, method func() (T, error)) {
+	pt.t.Helper()
+	_, err := method()
 	if err == nil {
-		pt.t.Fatal("expected error from .Value()")
+		pt.t.Fatalf("expected error from %s", desc)
 	}
 
 	if !errors.Is(err, ErrNoValue) {
-		pt.t.Errorf(".Value() retured weird error, expect %q, got %q", ErrNoToken, err)
+		pt.t.Errorf("%s returned weird error, expect %q, got %q", desc, ErrNoValue, err)
 	}
+
+}
+
+func (pt *parserTester) noValueOk() {
+	pt.t.Helper()
+	noValOk(".Value()", pt, pt.Value)
+}
+
+func (pt *parserTester) valuesOk(expectStrs ...string) {
+	pt.t.Helper()
+
+	expect := make([]Arg, len(expectStrs))
+	for i, val := range expectStrs {
+		expect[i] = toValue(val)
+	}
+
+	values, err := pt.Values()
+	if err != nil {
+		pt.t.Fatalf(".Values returned unexpected error, %s", err)
+	}
+
+	if !reflect.DeepEqual(values, expect) {
+		pt.t.Errorf(".Values incorrect: want %v, got %v", expect, values)
+	}
+}
+
+func (pt *parserTester) noValuesOk() {
+	pt.t.Helper()
+	noValOk(".Values()", pt, pt.Values)
 }
 
 func TestSingleLongOpt(t *testing.T) {
