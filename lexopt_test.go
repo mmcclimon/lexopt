@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 )
 
 type parserTester struct {
@@ -213,4 +214,87 @@ func TestDumpState(t *testing.T) {
 	if !strings.Contains(w.String(), "--- parser state ---") {
 		pt.t.Fatalf("got nonsense from dumpState: %s", w.String())
 	}
+}
+
+func TestArgConversions(t *testing.T) {
+	a := toValue("-42")
+	runConvOk(t, a, "int", -42, a.Int, a.MustInt)
+	runConvErr(t, a, "bad uint", a.Uint, a.MustUint)
+	runConvErr(t, a, "bad uint64", a.Uint64, a.MustUint64)
+
+	a = toValue("-42")
+	runConvOk(t, a, "int64", int64(-42), a.Int64, a.MustInt64)
+
+	a = toValue("99")
+	runConvOk(t, a, "uint", 99, a.Uint, a.MustUint)
+
+	a = toValue("99")
+	runConvOk(t, a, "uint64", uint64(99), a.Uint64, a.MustUint64)
+
+	a = toValue("3.14")
+	runConvOk(t, a, "float", float64(3.14), a.Float64, a.MustFloat64)
+
+	a = toValue("true")
+	runConvOk(t, a, "bool", true, a.Bool, a.MustBool)
+
+	a = toValue("5m")
+	runConvOk(t, a, "duration", time.Duration(5*time.Minute), a.Duration, a.MustDuration)
+
+	a = toValue("hello")
+	runConvOk(t, a, "string", "hello", a.String, a.MustString)
+	runConvErr(t, a, "bad int", a.Int, a.MustInt)
+	runConvErr(t, a, "bad int64", a.Int64, a.MustInt64)
+	runConvErr(t, a, "bad float", a.Float64, a.MustFloat64)
+	runConvErr(t, a, "bad bool", a.Bool, a.MustBool)
+	runConvErr(t, a, "bad duration", a.Duration, a.MustDuration)
+
+}
+
+func runConvOk[T comparable](
+	t *testing.T,
+	a Arg,
+	desc string,
+	expect T,
+	tryMethod func() (T, error),
+	mustMethod func() T,
+) {
+	t.Run(desc, func(t *testing.T) {
+		val, err := tryMethod()
+		if err != nil {
+			t.Fatalf("conversion returned unexpected err: %s", err)
+		}
+
+		if val != expect {
+			t.Errorf("bad conversion: want %v, got %v", expect, val)
+		}
+
+		mustVal := mustMethod()
+		if mustVal != expect {
+			t.Errorf("bad conversion: want %v, got %v", expect, mustVal)
+		}
+	})
+}
+
+func runConvErr[T comparable](
+	t *testing.T,
+	a Arg,
+	desc string,
+	tryMethod func() (T, error),
+	mustMethod func() T,
+) {
+	t.Run(desc, func(t *testing.T) {
+		_, err := tryMethod()
+		if err == nil {
+			t.Fatal("conversion did not return expected err")
+		}
+
+		defer func() {
+			r := recover()
+			if r == nil {
+				t.Errorf("expected panic, and did not")
+			}
+		}()
+
+		mustMethod()
+	})
 }
