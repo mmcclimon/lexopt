@@ -43,44 +43,34 @@ func New(argv []string) *Parser {
 func (p *Parser) Next() bool {
 	switch p.state {
 	case pendingValue:
+		// We have an --long=value with an unconsumed value; this is an error.
 		p.err = ErrUnexpectedValue
 		return false
 
 	case short:
-		if len(p.short) == 0 {
-			p.state = empty
-			break
-		}
-
+		// We have an -s=value with an unconsumed value; this is an error.
 		if strings.HasPrefix(p.short, "=") && p.short != "=" {
 			p.err = ErrUnexpectedValue
 			return false
 		}
 
+		// Take the next short option out of an -abc set.
 		p.Current = toShort(p.short[0])
-		p.short = p.short[1:]
-
-		if p.short == "" {
-			p.state = empty
-		}
+		p.updateShort(p.short[1:])
 		return true
 
 	case finished:
 		nextTok, err := p.nextTok()
-		switch {
-		case errors.Is(err, ErrNoToken):
+		if err != nil {
 			return false
-		case err != nil:
-			p.err = err
-			return false
-		default:
-			p.Current = toPositional(nextTok)
-			return true
 		}
+
+		p.Current = toPositional(nextTok)
+		return true
 	}
 
 	if p.state != empty {
-		panic("unexpected state!")
+		panic("unexpected state")
 	}
 
 	nextTok, err := p.nextTok()
@@ -111,12 +101,8 @@ func (p *Parser) Next() bool {
 			return true
 		}
 
-		if len(nextTok) > 2 {
-			p.state = short
-			p.short = nextTok[2:]
-		}
-
 		p.Current = toShort(nextTok[1])
+		p.updateShort(nextTok[2:])
 		return true
 
 	default:
@@ -129,8 +115,10 @@ func (p *Parser) Next() bool {
 func (p *Parser) Value() (Arg, error) {
 	switch p.state {
 	case pendingValue:
+		val := toValue(p.pending)
 		p.state = empty
-		return toValue(p.pending), nil
+		p.pending = ""
+		return val, nil
 
 	case empty:
 		val, err := p.nextTok()
@@ -141,16 +129,10 @@ func (p *Parser) Value() (Arg, error) {
 		return toValue(val), nil
 
 	case short:
-		if p.short == "=" {
-			// If you passed -x= and want a value, that's silly.
-			return noMatch(), ErrNoValue
-		}
-
 		// Remove a leading equals, if we have it, and then return everything
 		// else.
 		val := toValue(strings.TrimPrefix(p.short, "="))
-		p.short = ""
-		p.state = empty
+		p.updateShort("")
 		return val, nil
 
 	case finished:
@@ -173,6 +155,17 @@ func (p *Parser) nextTok() (string, error) {
 	next := p.argv[p.idx]
 	p.idx++
 	return next, nil
+}
+
+// Set p.short to remaining and update the state correctly for empty string.
+func (p *Parser) updateShort(remaining string) {
+	p.short = remaining
+
+	if remaining == "" {
+		p.state = empty
+	} else {
+		p.state = short
+	}
 }
 
 func (p *Parser) dumpState(w io.Writer) {

@@ -37,7 +37,7 @@ func (pt *parserTester) nextErrOk(expectErr error) {
 
 func (pt *parserTester) longOk(expect string) {
 	pt.nextOk()
-	if pt.Current != Long(expect) {
+	if pt.Current != toLong(expect) {
 		pt.t.Errorf(`.Current, expect .Long(%q), got %v`, expect, pt.Current)
 	}
 }
@@ -111,6 +111,14 @@ func TestDoubleDash(t *testing.T) {
 	pt := newTester(t, "--foo", "--", "whatever")
 	pt.longOk("foo")
 	pt.positionalOk("whatever")
+}
+
+func TestValueAfterEndOfOptions(t *testing.T) {
+	pt := newTester(t, "--foo=bar", "--", "wat", "whatever")
+	pt.longOk("foo")
+	pt.valueOk("bar")
+	pt.positionalOk("wat")
+	pt.noValueOk()
 }
 
 func TestLongValues(t *testing.T) {
@@ -211,7 +219,7 @@ func TestShortValues(t *testing.T) {
 	t.Run("equal as value", func(t *testing.T) {
 		pt := newTester(t, "-u=")
 		pt.shortOk("u")
-		pt.noValueOk()
+		pt.valueOk("")
 	})
 
 	t.Run("unconsumed equal", func(t *testing.T) {
