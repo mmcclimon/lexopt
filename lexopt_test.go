@@ -247,6 +247,39 @@ func TestShortValues(t *testing.T) {
 	})
 }
 
+func TestOptionalValue(t *testing.T) {
+	optOk := func(pt *parserTester, expect string) {
+		val, ok := pt.OptionalValue()
+		if !ok {
+			t.Fatal(".OptionalValue() unexpectedly returned false")
+		}
+
+		if val != toValue(expect) {
+			t.Errorf(".OptionalValue() returned bad value, want %v, want %v", expect, val)
+		}
+	}
+
+	noOptOk := func(pt *parserTester) {
+		val, ok := pt.OptionalValue()
+		if ok {
+			t.Fatalf(".OptionalValue() unexpectedly returned true: %v", val)
+		}
+	}
+
+	pt := newTesterWs(t, "-a=foo --long=bar")
+	pt.shortOk('a')
+	optOk(pt, "foo")
+	pt.longOk("long")
+	optOk(pt, "bar")
+
+	pt = newTesterWs(t, "-a foo --long bar")
+	pt.shortOk('a')
+	noOptOk(pt)
+	pt.valueOk("foo")
+	pt.longOk("long")
+	noOptOk(pt)
+}
+
 func TestDumpState(t *testing.T) {
 	var w strings.Builder
 	pt := newTester(t, "-l")

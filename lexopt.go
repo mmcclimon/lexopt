@@ -117,6 +117,15 @@ func (p *Parser) Value() (Arg, error) {
 	return ret, err
 }
 
+func (p *Parser) OptionalValue() (Arg, bool) {
+	if !p.hasPending() {
+		return Arg{}, false
+	}
+
+	ret, _, _ := p.value()
+	return ret, true
+}
+
 func (p *Parser) value() (Arg, bool, error) {
 	switch p.state {
 	case pendingValue:
