@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"strings"
 )
 
@@ -168,7 +169,12 @@ func (p *Parser) updateShort(remaining string) {
 	}
 }
 
-func (p *Parser) dumpState(w io.Writer) {
+func (p *Parser) dumpState(out ...io.Writer) {
+	var w io.Writer = os.Stdout
+	if len(out) > 0 {
+		w = out[0]
+	}
+
 	fmt.Fprintln(w, "--- parser state ---")
 	fmt.Fprintln(w, "Current:    ", p.Current)
 	fmt.Fprintln(w, "argv:       ", p.argv)
@@ -176,6 +182,7 @@ func (p *Parser) dumpState(w io.Writer) {
 	fmt.Fprintln(w, "state:      ", p.state)
 	fmt.Fprintln(w, "pending arg:", p.pending)
 	fmt.Fprintln(w, "short:      ", p.short)
+	fmt.Fprintln(w, "shortpos:   ", p.shortpos)
 	fmt.Fprintln(w, "err:        ", p.err)
 	fmt.Fprintln(w, "---")
 }
