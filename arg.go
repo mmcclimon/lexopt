@@ -15,14 +15,6 @@ type Arg struct {
 	s    string
 }
 
-func toLong(s string) Arg {
-	return Arg{argLong, s}
-}
-
-func toShort(b byte) Arg {
-	return Arg{argShort, string(b)}
-}
-
 func toPositional(s string) Arg {
 	return Arg{argPositional, s}
 }
@@ -35,24 +27,12 @@ func toValue(s string) Arg {
 	return Arg{argValue, s}
 }
 
-func Short(toMatch string) Arg {
-	if toMatch == "" {
-		panic("argument to Short must not be empty")
-	}
-
-	if len(toMatch) > 1 {
-		panic("argument to Short must be a single byte")
-	}
-
-	return toShort(toMatch[0])
+func Short(toMatch rune) Arg {
+	return Arg{argShort, string(toMatch)}
 }
 
 func Long(toMatch string) Arg {
-	if toMatch == "" {
-		panic("argument to Long must not be empty")
-	}
-
-	return toLong(toMatch)
+	return Arg{argLong, toMatch}
 }
 
 func (a Arg) String() string {

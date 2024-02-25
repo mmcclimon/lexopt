@@ -21,7 +21,7 @@ type Parser struct {
 	idx      int
 	state    state
 	pending  string
-	short    string
+	short    []rune
 	shortpos int
 	err      error
 }
@@ -93,7 +93,7 @@ func (p *Parser) Next() bool {
 			p.pending = after
 			p.state = pendingValue
 		}
-		p.Current = toLong(before)
+		p.Current = Long(before)
 		return true
 
 	case strings.HasPrefix(nextTok, "-"):
@@ -131,7 +131,7 @@ func (p *Parser) Value() (Arg, error) {
 
 	case short:
 		// Remove a leading equals, if we have it, and then return everything else.
-		val := toValue(strings.TrimPrefix(p.short[p.shortpos:], "="))
+		val := toValue(strings.TrimPrefix(string(p.short[p.shortpos:]), "="))
 		p.resetShort("")
 		return val, nil
 
@@ -159,12 +159,12 @@ func (p *Parser) nextTok() (string, error) {
 
 // Set p.short to remaining and update the state correctly for empty string.
 func (p *Parser) takeShort() Arg {
-	ret := toShort(p.short[p.shortpos])
+	ret := Short(p.short[p.shortpos])
 	p.shortpos++
 
 	if p.shortpos >= len(p.short) {
 		p.state = empty
-		p.short = ""
+		p.short = nil
 		p.shortpos = 0
 	} else {
 		p.state = short
@@ -174,7 +174,7 @@ func (p *Parser) takeShort() Arg {
 }
 
 func (p *Parser) resetShort(value string) {
-	p.short = value
+	p.short = []rune(value)
 	p.shortpos = 0
 
 	if value == "" {
