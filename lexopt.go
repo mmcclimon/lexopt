@@ -125,30 +125,6 @@ func (p *Parser) Next() bool {
 	}
 }
 
-func (p *Parser) Err() error {
-	return p.err
-}
-
-func Short(toMatch string) Arg {
-	if toMatch == "" {
-		panic("argument to Short must not be empty")
-	}
-
-	if len(toMatch) > 1 {
-		panic("argument to Short must be a single byte")
-	}
-
-	return toShort(toMatch[0])
-}
-
-func Long(toMatch string) Arg {
-	if toMatch == "" {
-		panic("argument to Long must not be empty")
-	}
-
-	return toLong(toMatch)
-}
-
 // this should return an error
 func (p *Parser) Value() (Arg, error) {
 	switch p.state {
@@ -183,6 +159,10 @@ func (p *Parser) Value() (Arg, error) {
 	default:
 		panic("unreachable")
 	}
+}
+
+func (p *Parser) Err() error {
+	return p.err
 }
 
 func (p *Parser) nextTok() (string, error) {
