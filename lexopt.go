@@ -81,7 +81,7 @@ func (p *Parser) Next() bool {
 			return false
 		}
 
-		p.Current = toPositional(nextTok)
+		p.Current = Value(nextTok)
 		return true
 	}
 
@@ -113,7 +113,7 @@ func (p *Parser) Next() bool {
 
 	case strings.HasPrefix(nextTok, "-"):
 		if nextTok == "-" {
-			p.Current = toPositional(nextTok)
+			p.Current = Value(nextTok)
 			return true
 		}
 
@@ -122,7 +122,7 @@ func (p *Parser) Next() bool {
 		return true
 
 	default:
-		p.Current = toPositional(nextTok)
+		p.Current = Value(nextTok)
 		return true
 	}
 }
@@ -144,7 +144,7 @@ func (p *Parser) OptionalValue() (Arg, bool) {
 func (p *Parser) value() (Arg, bool, error) {
 	switch p.state {
 	case pendingValue:
-		val := toValue(p.pending)
+		val := Value(p.pending)
 		p.state = empty
 		p.pending = ""
 		return val, true, nil
@@ -152,21 +152,21 @@ func (p *Parser) value() (Arg, bool, error) {
 	case empty:
 		val, err := p.nextTok()
 		if err != nil {
-			return noMatch(), false, ErrNoValue
+			return Arg{}, false, ErrNoValue
 		}
 
-		return toValue(val), false, nil
+		return Value(val), false, nil
 
 	case short:
 		// Remove a leading equals, if we have it, and then return everything else.
 		raw := string(p.short[p.shortpos:])
 		hasEqual := strings.HasPrefix(raw, "=")
-		val := toValue(strings.TrimPrefix(raw, "="))
+		val := Value(strings.TrimPrefix(raw, "="))
 		p.resetShort("")
 		return val, hasEqual, nil
 
 	case finished:
-		return noMatch(), false, ErrNoValue
+		return Arg{}, false, ErrNoValue
 
 	default:
 		panic("unreachable")
@@ -187,7 +187,7 @@ func (p *Parser) Values() ([]Arg, error) {
 	// Take more, if we can.
 	for !hadEqual && p.nextIsNormal() {
 		val, _ := p.nextTok()
-		vals = append(vals, toValue(val))
+		vals = append(vals, Value(val))
 	}
 
 	return vals, nil
@@ -303,7 +303,7 @@ func (ra *RawArgs) Next() bool {
 		return false
 	}
 
-	ra.Current = toPositional(nextTok)
+	ra.Current = Value(nextTok)
 	return true
 }
 
@@ -328,7 +328,7 @@ func (ra *RawArgs) Peek() (Arg, bool) {
 		return Arg{}, false
 	}
 
-	return toPositional(ra.parser.argv[ra.parser.idx]), true
+	return Value(ra.parser.argv[ra.parser.idx]), true
 }
 
 func (ra *RawArgs) AsSlice() []Arg {

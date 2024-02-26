@@ -245,7 +245,7 @@ func TestRawArgsCompat(t *testing.T) {
 	if !ok {
 		t.Fatalf("NextIf unexpectedly returned false")
 	}
-	if arg != toPositional("a") {
+	if arg != Value("a") {
 		t.Errorf("NextIf returned bad arg: %v", arg)
 	}
 

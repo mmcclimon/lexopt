@@ -8,28 +8,15 @@ import (
 type argType int
 
 const (
-	argUnmatched argType = iota
+	argInvalid argType = iota
 	argShort
 	argLong
-	argPositional
-	argValue
+	argPlain
 )
 
 type Arg struct {
 	kind argType
 	s    string
-}
-
-func toPositional(s string) Arg {
-	return Arg{argPositional, s}
-}
-
-func noMatch() Arg {
-	return Arg{kind: argUnmatched}
-}
-
-func toValue(s string) Arg {
-	return Arg{argValue, s}
 }
 
 func Short(toMatch rune) Arg {
@@ -38,6 +25,10 @@ func Short(toMatch rune) Arg {
 
 func Long(toMatch string) Arg {
 	return Arg{argLong, toMatch}
+}
+
+func Value(toMatch string) Arg {
+	return Arg{argPlain, toMatch}
 }
 
 // Convenience functions for conversions.

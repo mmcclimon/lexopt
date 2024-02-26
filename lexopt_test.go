@@ -63,7 +63,7 @@ func (pt *parserTester) shortOk(expect rune) {
 func (pt *parserTester) positionalOk(expect string) {
 	pt.t.Helper()
 	pt.nextOk()
-	if pt.Current != toPositional(expect) {
+	if pt.Current != Value(expect) {
 		pt.t.Errorf(".Next(), expect %q, got %q", expect, pt.Current)
 	}
 }
@@ -75,7 +75,7 @@ func (pt *parserTester) valueOk(expect string) {
 		pt.t.Fatalf(".Value() return unexpected err: %s", err)
 	}
 
-	if val != toValue(expect) {
+	if val != Value(expect) {
 		pt.t.Errorf(".Value(), expect %q, got %q", expect, val)
 	}
 }
@@ -103,7 +103,7 @@ func (pt *parserTester) valuesOk(expectStrs ...string) {
 
 	expect := make([]Arg, len(expectStrs))
 	for i, val := range expectStrs {
-		expect[i] = toValue(val)
+		expect[i] = Value(val)
 	}
 
 	values, err := pt.Values()
@@ -280,7 +280,7 @@ func TestOptionalValue(t *testing.T) {
 			t.Fatal(".OptionalValue() unexpectedly returned false")
 		}
 
-		if val != toValue(expect) {
+		if val != Value(expect) {
 			t.Errorf(".OptionalValue() returned bad value, want %v, want %v", expect, val)
 		}
 	}
@@ -341,7 +341,7 @@ func (rat *rawArgsTester) nextArgOk(expect string) {
 		rat.t.Error(".Next() unexpectedly returned false")
 	}
 
-	if rat.Current != toPositional(expect) {
+	if rat.Current != Value(expect) {
 		rat.t.Errorf(".Current is wrong: want %q, got %v", expect, rat.Current)
 	}
 }
@@ -353,7 +353,7 @@ func (rat *rawArgsTester) peekOk(expect string) {
 		rat.t.Fatal(".Peek() unexpectedly returned false")
 	}
 
-	if val != toPositional(expect) {
+	if val != Value(expect) {
 		rat.t.Errorf(".Peek returned bad value: want %q, got %v", expect, val)
 	}
 }
@@ -378,7 +378,7 @@ func (rat *rawArgsTester) argSliceOk(expectStrs ...string) {
 
 	expect := make([]Arg, len(expectStrs))
 	for i, val := range expectStrs {
-		expect[i] = toPositional(val)
+		expect[i] = Value(val)
 	}
 
 	args := rat.AsSlice()
@@ -447,30 +447,37 @@ func TestDumpState(t *testing.T) {
 }
 
 func TestArgConversions(t *testing.T) {
-	a := toValue("-42")
+	a := Value("-42")
 	runConvOk(t, a, "int", -42, a.Int, a.MustInt)
 	runConvErr(t, a, "bad uint", a.Uint, a.MustUint)
 	runConvErr(t, a, "bad uint64", a.Uint64, a.MustUint64)
 
-	a = toValue("-42")
+	a = Value("-42")
 	runConvOk(t, a, "int64", int64(-42), a.Int64, a.MustInt64)
 
-	a = toValue("99")
+	a = Value("99")
 	runConvOk(t, a, "uint", 99, a.Uint, a.MustUint)
 
-	a = toValue("99")
+	a = Value("99")
 	runConvOk(t, a, "uint64", uint64(99), a.Uint64, a.MustUint64)
 
-	a = toValue("3.14")
+	a = Value("3.14")
 	runConvOk(t, a, "float", float64(3.14), a.Float64, a.MustFloat64)
 
-	a = toValue("true")
+	a = Value("true")
 	runConvOk(t, a, "bool", true, a.Bool, a.MustBool)
 
-	a = toValue("5m")
+	a = Value("5m")
 	runConvOk(t, a, "duration", time.Duration(5*time.Minute), a.Duration, a.MustDuration)
 
-	a = toValue("hello")
+	a = Value("hello")
+	if s := a.String(); s != "hello" {
+		t.Fatalf("got totally bizarre string value: %s", s)
+	}
+	if s := a.MustString(); s != "hello" {
+		t.Fatalf("got totally bizarre string value: %s", s)
+	}
+
 	runConvErr(t, a, "bad int", a.Int, a.MustInt)
 	runConvErr(t, a, "bad int64", a.Int64, a.MustInt64)
 	runConvErr(t, a, "bad float", a.Float64, a.MustFloat64)
