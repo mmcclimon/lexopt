@@ -18,6 +18,7 @@ type Parser struct {
 	Current Arg
 
 	argv     []string
+	binName  string
 	idx      int
 	state    state
 	pending  string
@@ -35,11 +36,25 @@ const (
 	finished
 )
 
-func New(argv []string) *Parser {
+func New(fullArgv []string) *Parser {
+	return &Parser{
+		binName: fullArgv[0],
+		argv:    fullArgv[1:],
+	}
+}
+
+func NewFromEnv() *Parser {
+	return New(os.Args)
+}
+
+func NewFromArgs(argv []string) *Parser {
 	return &Parser{
 		argv: argv,
-		idx:  0,
 	}
+}
+
+func (p *Parser) BinName() string {
+	return p.binName
 }
 
 func (p *Parser) Next() bool {

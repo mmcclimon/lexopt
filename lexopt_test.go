@@ -2,6 +2,7 @@ package lexopt
 
 import (
 	"errors"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -121,6 +122,29 @@ func (pt *parserTester) noValuesOk() {
 }
 
 /* Here be tests. */
+
+func TestConstructors(t *testing.T) {
+	p := New([]string{"myapp", "-f"})
+	if p.BinName() != "myapp" {
+		t.Errorf("BinName: want %q, got %q", "myapp", p.BinName())
+	}
+
+	p = NewFromArgs(nil)
+	if p.BinName() != "" {
+		t.Errorf("BinName: want empty string, got %q", p.BinName())
+	}
+
+	orig := os.Args
+	defer func() {
+		os.Args = orig
+	}()
+
+	os.Args = []string{"myapp", "-f"}
+	p = NewFromEnv()
+	if p.BinName() != "myapp" {
+		t.Errorf("BinName: want %q, got %q", "myapp", p.BinName())
+	}
+}
 
 func TestSingleLongOpt(t *testing.T) {
 	pt := newTester(t, "--foo")
