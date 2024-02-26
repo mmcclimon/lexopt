@@ -120,6 +120,8 @@ func (pt *parserTester) noValuesOk() {
 	noValOk(".Values()", pt, pt.Values)
 }
 
+/* Here be tests. */
+
 func TestSingleLongOpt(t *testing.T) {
 	pt := newTester(t, "--foo")
 	pt.longOk("foo")
@@ -278,6 +280,136 @@ func TestOptionalValue(t *testing.T) {
 	pt.valueOk("foo")
 	pt.longOk("long")
 	noOptOk(pt)
+}
+
+type rawArgsTester struct {
+	*RawArgs
+	t *testing.T
+}
+
+func (pt *parserTester) rawArgsOk() *rawArgsTester {
+	pt.t.Helper()
+
+	args, err := pt.RawArgs()
+	if err != nil {
+		pt.t.Fatalf(".RawArgs returned unexpected error, %s", err)
+	}
+
+	return &rawArgsTester{args, pt.t}
+}
+
+func (pt *parserTester) rawArgsErrOk() {
+	pt.t.Helper()
+
+	_, err := pt.RawArgs()
+	if err == nil {
+		pt.t.Fatalf(".RawArgs did not return error")
+	}
+
+	if !errors.Is(err, ErrUnexpectedValue) {
+		pt.t.Fatalf(".RawArgs returned unexpected error, %s", err)
+	}
+}
+
+func (rat *rawArgsTester) nextArgOk(expect string) {
+	rat.t.Helper()
+	if !rat.Next() {
+		rat.t.Error(".Next() unexpectedly returned false")
+	}
+
+	if rat.Current != toPositional(expect) {
+		rat.t.Errorf(".Current is wrong: want %q, got %v", expect, rat.Current)
+	}
+}
+
+func (rat *rawArgsTester) peekOk(expect string) {
+	rat.t.Helper()
+	val, ok := rat.Peek()
+	if !ok {
+		rat.t.Fatal(".Peek() unexpectedly returned false")
+	}
+
+	if val != toPositional(expect) {
+		rat.t.Errorf(".Peek returned bad value: want %q, got %v", expect, val)
+	}
+}
+
+func (rat *rawArgsTester) peekEmptyOk() {
+	rat.t.Helper()
+	val, ok := rat.Peek()
+	if ok {
+		rat.t.Errorf(".Peek() unexpectedly returned value: %v", val)
+	}
+}
+
+func (rat *rawArgsTester) emptyOk() {
+	rat.t.Helper()
+	if rat.Next() {
+		rat.t.Error(".Next() unexpectedly returned true")
+	}
+}
+
+func (rat *rawArgsTester) argSliceOk(expectStrs ...string) {
+	rat.t.Helper()
+
+	expect := make([]Arg, len(expectStrs))
+	for i, val := range expectStrs {
+		expect[i] = toPositional(val)
+	}
+
+	args := rat.AsSlice()
+	if !reflect.DeepEqual(args, expect) {
+		rat.t.Errorf(".AsSlice incorrect: want %v, got %v", expect, args)
+	}
+}
+
+func (rat *rawArgsTester) stringSliceOk(expect ...string) {
+	rat.t.Helper()
+
+	args := rat.AsStringSlice()
+	if !reflect.DeepEqual(args, expect) {
+		rat.t.Errorf(".AsStringSlice incorrect: want %v, got %v", expect, args)
+	}
+}
+
+func TestRawArgs(t *testing.T) {
+	t.Run("iterate", func(t *testing.T) {
+		pt := newTesterWs(t, "--foo bar baz quux")
+		pt.longOk("foo")
+		args := pt.rawArgsOk()
+		args.nextArgOk("bar")
+		args.peekOk("baz")
+		args.nextArgOk("baz")
+		pt.positionalOk("quux")
+		args.peekEmptyOk()
+	})
+
+	t.Run("arg slice", func(t *testing.T) {
+		pt := newTesterWs(t, "--foo bar baz quux")
+		pt.longOk("foo")
+		args := pt.rawArgsOk()
+		args.argSliceOk("bar", "baz", "quux")
+	})
+
+	t.Run("string slice", func(t *testing.T) {
+		pt := newTesterWs(t, "--foo bar baz quux")
+		pt.longOk("foo")
+		args := pt.rawArgsOk()
+		args.stringSliceOk("bar", "baz", "quux")
+	})
+
+	t.Run("error", func(t *testing.T) {
+		pt := newTesterWs(t, "--foo=bar baz quux")
+		pt.longOk("foo")
+		pt.rawArgsErrOk()
+
+		// But we can continue after eating the value
+		pt.valueOk("bar")
+		args := pt.rawArgsOk()
+		args.nextArgOk("baz")
+		pt.positionalOk("quux")
+		pt.emptyOk()
+	})
 }
 
 func TestDumpState(t *testing.T) {

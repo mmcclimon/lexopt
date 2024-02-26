@@ -205,3 +205,55 @@ func TestMultiValuesCompat(t *testing.T) {
 		pt.shortOk('b')
 	})
 }
+
+func TestRawArgsCompat(t *testing.T) {
+	pt := newTesterWs(t, "-a b c d")
+	args := pt.rawArgsOk()
+	args.argSliceOk("-a", "b", "c", "d")
+	pt.rawArgsOk()
+	pt.emptyOk()
+	pt.rawArgsOk().emptyOk()
+
+	pt = newTesterWs(t, "-ab c d")
+	pt.shortOk('a')
+	pt.rawArgsErrOk()
+	pt.valueOk("b")
+	pt.rawArgsOk().stringSliceOk("c", "d")
+	pt.emptyOk()
+	pt.rawArgsOk().emptyOk()
+
+	pt = newTesterWs(t, "-a b c d")
+	args = pt.rawArgsOk()
+	args.nextArgOk("-a")
+	args.nextArgOk("b")
+	args.nextArgOk("c")
+	pt.positionalOk("d")
+	pt.emptyOk()
+
+	pt = newTesterWs(t, "a")
+	args = pt.rawArgsOk()
+	args.peekOk("a")
+
+	isA := func(a Arg) bool { return a.String() == "a" }
+
+	_, ok := args.NextIf(func(_ Arg) bool { return false })
+	if ok {
+		t.Fatalf("NextIf unexpectedly returned true")
+	}
+
+	arg, ok := args.NextIf(isA)
+	if !ok {
+		t.Fatalf("NextIf unexpectedly returned false")
+	}
+	if arg != toPositional("a") {
+		t.Errorf("NextIf returned bad arg: %v", arg)
+	}
+
+	pt.emptyOk()
+
+	_, ok = args.NextIf(isA)
+	if ok {
+		t.Fatalf("NextIf unexpectedly returned true")
+	}
+
+}

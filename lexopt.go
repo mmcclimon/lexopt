@@ -269,3 +269,65 @@ func (p *Parser) dumpState(out ...io.Writer) {
 	fmt.Fprintln(w, "err:        ", p.err)
 	fmt.Fprintln(w, "---")
 }
+
+func (p *Parser) RawArgs() (*RawArgs, error) {
+	if p.hasPending() {
+		return nil, ErrUnexpectedValue
+	}
+	return &RawArgs{parser: p}, nil
+}
+
+type RawArgs struct {
+	Current Arg
+	parser  *Parser
+}
+
+func (ra *RawArgs) Next() bool {
+	nextTok, err := ra.parser.nextTok()
+	if err != nil {
+		return false
+	}
+
+	ra.Current = toPositional(nextTok)
+	return true
+}
+
+func (ra *RawArgs) NextIf(pred func(Arg) bool) (Arg, bool) {
+	// This is pretty unidiomatic in Go, but I'm implementing it for the compat
+	// tests.
+	arg, ok := ra.Peek()
+	if !ok {
+		return Arg{}, false
+	}
+
+	if pred(arg) {
+		ra.Next()
+		return arg, true
+	}
+
+	return Arg{}, false
+}
+
+func (ra *RawArgs) Peek() (Arg, bool) {
+	if ra.parser.idx >= len(ra.parser.argv) {
+		return Arg{}, false
+	}
+
+	return toPositional(ra.parser.argv[ra.parser.idx]), true
+}
+
+func (ra *RawArgs) AsSlice() []Arg {
+	args := make([]Arg, 0, len(ra.parser.argv)-ra.parser.idx)
+	for ra.Next() {
+		args = append(args, ra.Current)
+	}
+	return args
+}
+
+func (ra *RawArgs) AsStringSlice() []string {
+	args := make([]string, 0, len(ra.parser.argv)-ra.parser.idx)
+	for ra.Next() {
+		args = append(args, ra.Current.String())
+	}
+	return args
+}
