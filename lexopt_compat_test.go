@@ -5,7 +5,7 @@ package lexopt
 import "testing"
 
 func TestBasicCompat(t *testing.T) {
-	pt := newTesterWs(t, "-n 10 foo - -- baz -qux")
+	pt := newTester(t, "-n 10 foo - -- baz -qux")
 	pt.shortOk('n')
 	pt.valueOk("10")
 	pt.positionalOk("foo")
@@ -18,7 +18,7 @@ func TestBasicCompat(t *testing.T) {
 }
 
 func TestCombinedCompat(t *testing.T) {
-	pt := newTesterWs(t, "-abc -fvalue -xfvalue")
+	pt := newTester(t, "-abc -fvalue -xfvalue")
 	pt.shortOk('a')
 	pt.shortOk('b')
 	pt.shortOk('c')
@@ -31,7 +31,7 @@ func TestCombinedCompat(t *testing.T) {
 }
 
 func TestLongCompat(t *testing.T) {
-	pt := newTester(t, "--foo", "--bar=qux", "--foobar=qux=baz")
+	pt := newTester(t, "--foo --bar=qux --foobar=qux=baz")
 	pt.longOk("foo")
 	pt.longOk("bar")
 	pt.valueOk("qux")
@@ -42,14 +42,14 @@ func TestLongCompat(t *testing.T) {
 
 func TestDashArgsCompat(t *testing.T) {
 	t.Run("double dash end of options", func(t *testing.T) {
-		pt := newTester(t, "-x", "--", "-y")
+		pt := newTester(t, "-x -- -y")
 		pt.shortOk('x')
 		pt.positionalOk("-y")
 		pt.emptyOk()
 	})
 
 	t.Run("but not as value", func(t *testing.T) {
-		pt := newTester(t, "-x", "--", "-y")
+		pt := newTester(t, "-x -- -y")
 		pt.shortOk('x')
 		pt.valueOk("--")
 		pt.shortOk('y')
@@ -57,7 +57,7 @@ func TestDashArgsCompat(t *testing.T) {
 	})
 
 	t.Run("dash is valid value", func(t *testing.T) {
-		pt := newTester(t, "-x", "-", "-y")
+		pt := newTester(t, "-x - -y")
 		pt.shortOk('x')
 		pt.positionalOk("-")
 		pt.shortOk('y')
@@ -84,12 +84,12 @@ func TestMissingValuesCompat(t *testing.T) {
 	pt2.longOk("out")
 	pt2.noValueOk()
 
-	pt3 := newTester(t)
+	pt3 := newTester(t, "")
 	pt3.noValueOk()
 }
 
 func TestWeirdValuesCompat(t *testing.T) {
-	pt := newTester(t, "", "--=", "--=3", "-", "-x", "--", "-", "-x", "--", "", "-", "-x")
+	pt := newTesterArgs(t, "", "--=", "--=3", "-", "-x", "--", "-", "-x", "--", "", "-", "-x")
 	pt.positionalOk("")
 
 	// Weird and questionable, indeed!
@@ -142,7 +142,7 @@ func TestShortOptEqualsSignCompat(t *testing.T) {
 }
 
 func TestUnicodeCompat(t *testing.T) {
-	pt := newTester(t, "-aµ", "--µ=10", "µ", "--foo=µ")
+	pt := newTester(t, "-aµ --µ=10 µ --foo=µ")
 	pt.shortOk('a')
 	pt.shortOk('µ')
 	pt.longOk("µ")
@@ -154,20 +154,20 @@ func TestUnicodeCompat(t *testing.T) {
 
 func TestMultiValuesCompat(t *testing.T) {
 	for _, test := range []string{"-a b c d", "-ab c d", "-a b c d --", "--a b c d"} {
-		pt := newTesterWs(t, test)
+		pt := newTester(t, test)
 		pt.nextOk()
 		pt.valuesOk("b", "c", "d")
 	}
 
 	for _, test := range []string{"-a=b c", "--a=b c"} {
-		pt := newTesterWs(t, test)
+		pt := newTester(t, test)
 		pt.nextOk()
 		pt.valuesOk("b")
 		pt.positionalOk("c")
 	}
 
 	for _, test := range []string{"-a", "--a", "-a -b", "-a -- b", "-a --"} {
-		pt := newTesterWs(t, test)
+		pt := newTester(t, test)
 		pt.nextOk()
 		pt.noValuesOk()
 		pt.Next()
@@ -178,7 +178,7 @@ func TestMultiValuesCompat(t *testing.T) {
 	}
 
 	for _, test := range []string{"-a=", "--a="} {
-		pt := newTesterWs(t, test)
+		pt := newTester(t, test)
 		pt.nextOk()
 		pt.valuesOk("")
 		pt.emptyOk()
@@ -193,13 +193,13 @@ func TestMultiValuesCompat(t *testing.T) {
 		t.Skip("go has no iteration protocol")
 
 		for _, test := range []string{"-a=b", "--a=b", "-a b"} {
-			pt := newTesterWs(t, test)
+			pt := newTester(t, test)
 			pt.nextOk()
 			pt.valuesOk()
 			pt.valueOk("b")
 		}
 
-		pt := newTesterWs(t, "-ab")
+		pt := newTester(t, "-ab")
 		pt.shortOk('a')
 		pt.valuesOk()
 		pt.shortOk('b')
@@ -207,14 +207,14 @@ func TestMultiValuesCompat(t *testing.T) {
 }
 
 func TestRawArgsCompat(t *testing.T) {
-	pt := newTesterWs(t, "-a b c d")
+	pt := newTester(t, "-a b c d")
 	args := pt.rawArgsOk()
 	args.argSliceOk("-a", "b", "c", "d")
 	pt.rawArgsOk()
 	pt.emptyOk()
 	pt.rawArgsOk().emptyOk()
 
-	pt = newTesterWs(t, "-ab c d")
+	pt = newTester(t, "-ab c d")
 	pt.shortOk('a')
 	pt.rawArgsErrOk()
 	pt.valueOk("b")
@@ -222,7 +222,7 @@ func TestRawArgsCompat(t *testing.T) {
 	pt.emptyOk()
 	pt.rawArgsOk().emptyOk()
 
-	pt = newTesterWs(t, "-a b c d")
+	pt = newTester(t, "-a b c d")
 	args = pt.rawArgsOk()
 	args.nextArgOk("-a")
 	args.nextArgOk("b")
@@ -230,7 +230,7 @@ func TestRawArgsCompat(t *testing.T) {
 	pt.positionalOk("d")
 	pt.emptyOk()
 
-	pt = newTesterWs(t, "a")
+	pt = newTester(t, "a")
 	args = pt.rawArgsOk()
 	args.peekOk("a")
 

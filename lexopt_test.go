@@ -13,12 +13,12 @@ type parserTester struct {
 	t *testing.T
 }
 
-func newTester(t *testing.T, argv ...string) *parserTester {
-	return &parserTester{New(argv), t}
+func newTester(t *testing.T, argv string) *parserTester {
+	return &parserTester{NewFromArgs(strings.Fields(argv)), t}
 }
 
-func newTesterWs(t *testing.T, argv string) *parserTester {
-	return &parserTester{New(strings.Fields(argv)), t}
+func newTesterArgs(t *testing.T, argv ...string) *parserTester {
+	return &parserTester{NewFromArgs(argv), t}
 }
 
 func (pt *parserTester) nextOk() {
@@ -129,18 +129,18 @@ func TestSingleLongOpt(t *testing.T) {
 }
 
 func TestNoOptions(t *testing.T) {
-	pt := newTester(t)
+	pt := newTester(t, "")
 	pt.emptyOk()
 }
 
 func TestDoubleDash(t *testing.T) {
-	pt := newTester(t, "--foo", "--", "whatever")
+	pt := newTester(t, "--foo -- whatever")
 	pt.longOk("foo")
 	pt.positionalOk("whatever")
 }
 
 func TestValueAfterEndOfOptions(t *testing.T) {
-	pt := newTester(t, "--foo=bar", "--", "wat", "whatever")
+	pt := newTester(t, "--foo=bar -- wat whatever")
 	pt.longOk("foo")
 	pt.valueOk("bar")
 	pt.positionalOk("wat")
@@ -148,14 +148,14 @@ func TestValueAfterEndOfOptions(t *testing.T) {
 }
 
 func TestLongValues(t *testing.T) {
-	tests := map[string][]string{
-		"with equal":    {"--foo=bar"},
-		"without equal": {"--foo", "bar"},
+	tests := map[string]string{
+		"with equal":    "--foo=bar",
+		"without equal": "--foo bar",
 	}
 
 	for desc, argv := range tests {
 		t.Run(desc, func(t *testing.T) {
-			pt := newTester(t, argv...)
+			pt := newTester(t, argv)
 			pt.longOk("foo")
 			pt.valueOk("bar")
 			pt.emptyOk()
@@ -177,7 +177,7 @@ func TestNoValue(t *testing.T) {
 
 func TestDashIsValue(t *testing.T) {
 	t.Run("as long opt value", func(t *testing.T) {
-		pt := newTester(t, "--file", "-")
+		pt := newTester(t, "--file -")
 		pt.longOk("file")
 		pt.valueOk("-")
 	})
@@ -189,14 +189,14 @@ func TestDashIsValue(t *testing.T) {
 }
 
 func TestShortBasic(t *testing.T) {
-	pt := newTester(t, "-x", "-b")
+	pt := newTester(t, "-x -b")
 	pt.shortOk('x')
 	pt.shortOk('b')
 	pt.emptyOk()
 }
 
 func TestShortCuddled(t *testing.T) {
-	pt := newTester(t, "-xb", "foo")
+	pt := newTester(t, "-xb foo")
 	pt.shortOk('x')
 	pt.shortOk('b')
 	pt.positionalOk("foo")
@@ -218,13 +218,13 @@ func TestShortValues(t *testing.T) {
 	})
 
 	t.Run("space", func(t *testing.T) {
-		pt := newTester(t, "-u", "no")
+		pt := newTester(t, "-u no")
 		pt.shortOk('u')
 		pt.valueOk("no")
 	})
 
 	t.Run("space with multiple", func(t *testing.T) {
-		pt := newTester(t, "-vu", "no")
+		pt := newTester(t, "-vu no")
 		pt.shortOk('v')
 		pt.shortOk('u')
 		pt.valueOk("no")
@@ -268,13 +268,13 @@ func TestOptionalValue(t *testing.T) {
 		}
 	}
 
-	pt := newTesterWs(t, "-a=foo --long=bar")
+	pt := newTester(t, "-a=foo --long=bar")
 	pt.shortOk('a')
 	optOk(pt, "foo")
 	pt.longOk("long")
 	optOk(pt, "bar")
 
-	pt = newTesterWs(t, "-a foo --long bar")
+	pt = newTester(t, "-a foo --long bar")
 	pt.shortOk('a')
 	noOptOk(pt)
 	pt.valueOk("foo")
@@ -374,7 +374,7 @@ func (rat *rawArgsTester) stringSliceOk(expect ...string) {
 
 func TestRawArgs(t *testing.T) {
 	t.Run("iterate", func(t *testing.T) {
-		pt := newTesterWs(t, "--foo bar baz quux")
+		pt := newTester(t, "--foo bar baz quux")
 		pt.longOk("foo")
 		args := pt.rawArgsOk()
 		args.nextArgOk("bar")
@@ -385,21 +385,21 @@ func TestRawArgs(t *testing.T) {
 	})
 
 	t.Run("arg slice", func(t *testing.T) {
-		pt := newTesterWs(t, "--foo bar baz quux")
+		pt := newTester(t, "--foo bar baz quux")
 		pt.longOk("foo")
 		args := pt.rawArgsOk()
 		args.argSliceOk("bar", "baz", "quux")
 	})
 
 	t.Run("string slice", func(t *testing.T) {
-		pt := newTesterWs(t, "--foo bar baz quux")
+		pt := newTester(t, "--foo bar baz quux")
 		pt.longOk("foo")
 		args := pt.rawArgsOk()
 		args.stringSliceOk("bar", "baz", "quux")
 	})
 
 	t.Run("error", func(t *testing.T) {
-		pt := newTesterWs(t, "--foo=bar baz quux")
+		pt := newTester(t, "--foo=bar baz quux")
 		pt.longOk("foo")
 		pt.rawArgsErrOk()
 
