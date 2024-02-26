@@ -42,8 +42,9 @@ func Long(toMatch string) Arg {
 
 // Convenience functions for conversions.
 
-func (a Arg) String() (string, error) {
-	return a.s, nil
+// Unlike the rest of the conversions, String will never fail.
+func (a Arg) String() string {
+	return a.s
 }
 
 func (a Arg) Bool() (bool, error) {
@@ -84,7 +85,7 @@ func must[T any](val T, err error) T {
 	return val
 }
 
-func (a Arg) MustString() string          { return must(a.String()) }
+func (a Arg) MustString() string          { return a.String() }
 func (a Arg) MustBool() bool              { return must(a.Bool()) }
 func (a Arg) MustInt() int                { return must(a.Int()) }
 func (a Arg) MustInt64() int64            { return must(a.Int64()) }

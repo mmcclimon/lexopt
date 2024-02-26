@@ -315,7 +315,6 @@ func TestArgConversions(t *testing.T) {
 	runConvOk(t, a, "duration", time.Duration(5*time.Minute), a.Duration, a.MustDuration)
 
 	a = toValue("hello")
-	runConvOk(t, a, "string", "hello", a.String, a.MustString)
 	runConvErr(t, a, "bad int", a.Int, a.MustInt)
 	runConvErr(t, a, "bad int64", a.Int64, a.MustInt64)
 	runConvErr(t, a, "bad float", a.Float64, a.MustFloat64)
