@@ -53,6 +53,20 @@ func (a Arg) String() string {
 // all the other Must methods.
 func (a Arg) MustString() string { return a.String() }
 
+// DashedString returns a formatted version of Arg. Short options are preceded
+// with a single dash, long options with a double dash, and all other args as
+// the raw arg value.
+func (a Arg) DashedString() string {
+	switch a.kind {
+	case argShort:
+		return "-" + a.s
+	case argLong:
+		return "--" + a.s
+	default:
+		return a.s
+	}
+}
+
 // Bool converts Arg to a boolean, using [strconv.ParseBool].
 func (a Arg) Bool() (bool, error) {
 	return strconv.ParseBool(a.s)

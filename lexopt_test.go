@@ -534,3 +534,13 @@ func runConvErr[T comparable](
 		mustMethod()
 	})
 }
+
+func TestDashedString(t *testing.T) {
+	if ds := Short('a').DashedString(); ds != "-a" {
+		t.Errorf(".DashedString returned weird string: want %q, got %q", "-a", ds)
+	}
+
+	if ds := Long("file").DashedString(); ds != "--file" {
+		t.Errorf(".DashedString returned weird string: want %q, got %q", "--file", ds)
+	}
+}
